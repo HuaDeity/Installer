@@ -91,22 +91,24 @@ jobs:
           else
             TAGS="static"
           fi
-          CGO_ENABLED=1 GOOS=darwin GOARCH=${{ matrix.arch }} go build -v -tags "${TAGS}" -ldflags "-s -w -X 'vencordinstaller/buildinfo.InstallerGitHash=$(git rev-parse --short HEAD)' -X 'vencordinstaller/buildinfo.InstallerTag=${{ github.ref_name }}'" -o VencordInstaller${{matrix.type}}-${{ matrix.arch }}
+          CGO_ENABLED=1 GOOS=darwin GOARCH=${{ matrix.arch }} go build -v -tags "${TAGS}" -ldflags "-s -w -X 'vencordinstaller/buildinfo.InstallerGitHash=$(git rev-parse --short HEAD)' -X 'vencordinstaller/buildinfo.InstallerTag=${{ github.ref_name }}'" -o VencordInstaller
 
       - name: Update executable
         run: |
-          chmod +x VencordInstaller${{matrix.type}}-${{ matrix.arch }}
+          chmod +x VencordInstaller
 
       - name: Generate MacOS bundle
         run: |
-          if [ "${{ matrix.type }}" = "Gui" ]; then
-            mkdir -p VencordInstaller${{matrix.type}}-${{ matrix.arch }}.app/Contents/MacOS
-            mkdir -p VencordInstaller${{matrix.type}}-${{ matrix.arch }}.app/Contents/Resources
-            cp macos/Info.plist VencordInstaller${{matrix.type}}-${{ matrix.arch }}.app/Contents/Info.plist
-            mv VencordInstaller VencordInstaller${{matrix.type}}-${{ matrix.arch }}.app/Contents/MacOS/VencordInstaller
-            cp macos/icon.icns VencordInstaller${{matrix.type}}-${{ matrix.arch }}.app/Contents/Resources/icon.icns
+          if [ "${{ matrix.type }}" = "Cli" ]; then
+            zip -r VencordInstaller${{ matrix.type }}-${{ matrix.arch }}.MacOS.zip VencordInstaller
+          else
+            mkdir -p VencordInstaller.app/Contents/MacOS
+            mkdir -p VencordInstaller.app/Contents/Resources
+            cp macos/Info.plist VencordInstaller.app/Contents/Info.plist
+            mv VencordInstaller VencordInstaller.app/Contents/MacOS/VencordInstaller
+            cp macos/icon.icns VencordInstaller.app/Contents/Resources/icon.icns
+            zip -r VencordInstaller${{ matrix.type }}-${{ matrix.arch }}.MacOS.zip VencordInstaller.app
           fi
-          zip -r VencordInstaller${{matrix.type}}-${{ matrix.arch }}.MacOS.zip VencordInstaller${{matrix.type}}-${{ matrix.arch }}.app
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
