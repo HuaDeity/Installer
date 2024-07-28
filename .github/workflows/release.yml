@@ -48,9 +48,12 @@ jobs:
           path: |
             VencordInstallerCli-linux
 
-
   build-mac:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+        type: [Gui, Cli]
 
     steps:
       - name: Install Go
@@ -82,27 +85,34 @@ jobs:
         run: go get -v
 
       - name: Build
-        run: CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -v -tags static -ldflags "-s -w -X 'vencordinstaller/buildinfo.InstallerGitHash=$(git rev-parse --short HEAD)' -X 'vencordinstaller/buildinfo.InstallerTag=${{ github.ref_name }}'" -o VencordInstaller
+        run: |
+          if [ "${{ matrix.type }}" = "Cli" ]; then
+            TAGS="static cli"
+          else
+            TAGS="static"
+          fi
+          CGO_ENABLED=1 GOOS=darwin GOARCH=${{ matrix.arch }} go build -v -tags "${TAGS}" -ldflags "-s -w -X 'vencordinstaller/buildinfo.InstallerGitHash=$(git rev-parse --short HEAD)' -X 'vencordinstaller/buildinfo.InstallerTag=${{ github.ref_name }}'" -o VencordInstaller${{matrix.type}}-${{ matrix.arch }}
 
       - name: Update executable
         run: |
-          chmod +x VencordInstaller
+          chmod +x VencordInstaller${{matrix.type}}-${{ matrix.arch }}
 
       - name: Generate MacOS bundle
         run: |
-          mkdir -p VencordInstaller.app/Contents/MacOS
-          mkdir -p VencordInstaller.app/Contents/Resources
-          cp macos/Info.plist VencordInstaller.app/Contents/Info.plist
-          mv VencordInstaller VencordInstaller.app/Contents/MacOS/VencordInstaller
-          cp macos/icon.icns VencordInstaller.app/Contents/Resources/icon.icns
-          zip -r VencordInstaller.MacOS.zip VencordInstaller.app
+          if [ "${{ matrix.type }}" != "Cli" ]; then
+            mkdir -p VencordInstaller${{matrix.type}}-${{ matrix.arch }}.app/Contents/MacOS
+            mkdir -p VencordInstaller${{matrix.type}}-${{ matrix.arch }}.app/Contents/Resources
+            cp macos/Info.plist VencordInstaller${{matrix.type}}-${{ matrix.arch }}.app/Contents/Info.plist
+            mv VencordInstaller VencordInstaller${{matrix.type}}-${{ matrix.arch }}.app/Contents/MacOS/VencordInstaller
+            cp macos/icon.icns VencordInstaller${{matrix.type}}-${{ matrix.arch }}.app/Contents/Resources/icon.icns
+          fi
+          zip -r VencordInstaller${{matrix.type}}-${{ matrix.arch }}.MacOS.zip VencordInstaller${{matrix.type}}-${{ matrix.arch }}.app
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: VencordInstaller-macos
-          path: VencordInstaller.MacOS.zip
-
+          path: VencordInstaller${{ matrix.type }}-${{ matrix.arch }}.MacOS.zip
 
   build-windows:
     runs-on: windows-latest
@@ -166,7 +176,6 @@ jobs:
             VencordInstaller.exe
             VencordInstallerCli.exe
 
-
   release:
     runs-on: ubuntu-latest
     needs: [build-linux, build-mac, build-windows]
@@ -200,5 +209,5 @@ jobs:
           draft: false
           files: |
             linux/VencordInstallerCli-linux
-            macos/VencordInstaller.MacOS.zip
-            windows/VencordInstalle*.exe
+            macos/VencordInstaller*.MacOS.zip
+            windows/VencordInstaller*.exe
