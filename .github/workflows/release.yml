@@ -113,7 +113,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: VencordInstaller-macos
+          name: VencordInstaller${{ matrix.type }}-${{ matrix.arch }}-macos
           path: VencordInstaller${{ matrix.type }}-${{ matrix.arch }}.MacOS.zip
 
   build-windows:
@@ -193,7 +193,7 @@ jobs:
 
       - uses: actions/download-artifact@v3
         with:
-          name: VencordInstaller-macos
+          pattern: VencordInstaller*-macos
           path: macos
 
       - uses: actions/download-artifact@v3
